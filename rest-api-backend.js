@@ -7,37 +7,28 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const IS_PROD = process.env.NODE_ENV === 'production';
+const BASE_URL = process.env.BASE_URL || '';
 
-// Configuraciones de seguridad para producción
-if (IS_PROD) {
-    app.set('trust proxy', 1);
-    app.use((req, res, next) => {
-        if (req.secure) {
-            next();
-        } else {
-            res.redirect('https://' + req.headers.host + req.url);
-        }
-    });
-}
+// Middleware para manejar la ruta base en GitHub Pages
+app.use((req, res, next) => {
+    req.baseUrl = BASE_URL;
+    next();
+});
 
-// CORS configuración
-app.use(cors({
-    origin: IS_PROD ? [
-        'https://tu-usuario.github.io',
-        'https://latex-markdown-editor.vercel.app'
-    ] : '*'
-}));
+// Configuración de CORS
+app.use(cors());
 
-// Middleware
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Middleware para archivos estáticos
 app.use(express.static(path.join(__dirname)));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// Ruta principal
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'markdown-latex-pdf-editor.html'));
+// Ruta principal que maneja el base path
+app.get('*', (req, res) => {
+    if (req.path === '/' || req.path === '/index.html') {
+        res.sendFile(path.join(__dirname, 'markdown-latex-pdf-editor.html'));
+    } else {
+        next();
+    }
 });
 
 // Configuración de multer para subida de archivos
